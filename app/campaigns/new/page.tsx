@@ -16,6 +16,17 @@ import {
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 
+interface SuggestionsResponse {
+  suggestions: string[];
+}
+
+interface CampaignTemplate {
+  id: string;
+  name: string;
+  description: string;
+  message: string;
+}
+
 interface Rule {
   field: string;
   operator: string;
@@ -26,6 +37,8 @@ export default function NewCampaignPage() {
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [schedule, setSchedule] = useState<Date>();
+  const [campaignType, setCampaignType] = useState<'one-time' | 'recurring'>('one-time');
+  const [deliveryTime, setDeliveryTime] = useState<string>('09:00');
   const [segments, setSegments] = useState<Segment[]>([]);
   const [selectedSegment, setSelectedSegment] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -58,6 +71,8 @@ export default function NewCampaignPage() {
         message,
         segmentId: selectedSegment,
         schedule: schedule ? schedule.toISOString() : undefined,
+        type: campaignType,
+        deliveryTime: schedule ? `${format(schedule, 'yyyy-MM-dd')}T${deliveryTime}` : undefined,
       };
 
       await api.post(endpoints.campaigns.create, campaignData);
@@ -133,6 +148,25 @@ export default function NewCampaignPage() {
 
                   <div>
                     <label
+                      htmlFor="campaignType"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Campaign Type
+                    </label>
+                    <select
+                      id="campaignType"
+                      value={campaignType}
+                      onChange={(e) => setCampaignType(e.target.value as 'one-time' | 'recurring')}
+                      required
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                    >
+                      <option value="one-time">One-time Campaign</option>
+                      <option value="recurring">Recurring Campaign</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
                       htmlFor="message"
                       className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
@@ -146,28 +180,6 @@ export default function NewCampaignPage() {
                       className="mt-1"
                       rows={4}
                     />
-                  </div>
-
-                  {/* AI Message Suggestions Section */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      AI Message Suggestions (Optional)
-                    </label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        // TODO: Call backend AI endpoint to get suggestions
-                        console.log('Fetching AI message suggestions...');
-                      }}
-                    >
-                      Get Suggestions
-                    </Button>
-                    {/* Placeholder for displaying suggestions */}
-                    {/* You would map through a state variable holding suggestions here */}
-                    <div className="mt-2 p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md text-sm text-gray-500 dark:text-gray-400">
-                      AI suggestions will appear here.
-                    </div>
                   </div>
 
                   <div>
@@ -200,6 +212,23 @@ export default function NewCampaignPage() {
                         />
                       </PopoverContent>
                     </Popover>
+                    {schedule && (
+                      <div className="mt-2">
+                        <label
+                          htmlFor="deliveryTime"
+                          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Delivery Time
+                        </label>
+                        <input
+                          type="time"
+                          id="deliveryTime"
+                          value={deliveryTime}
+                          onChange={(e) => setDeliveryTime(e.target.value)}
+                          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

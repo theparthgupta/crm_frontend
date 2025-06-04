@@ -44,6 +44,9 @@ export const endpoints = {
     create: '/api/campaigns',
     get: (id: string) => `/api/campaigns/${id}`,
   },
+  dashboard: {
+    stats: '/api/dashboard/stats'
+  },
   segments: {
     list: '/api/segments',
     create: '/api/segments',
@@ -55,6 +58,9 @@ export const endpoints = {
     create: '/api/ingest/customers',
     batchCreate: '/api/ingest/customers/batch',
     createOrder: '/api/ingest/orders',
+  },
+  orders: {
+    batchCreate: '/api/ingest/orders/batch',
   },
 };
 

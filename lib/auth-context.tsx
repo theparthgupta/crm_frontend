@@ -38,14 +38,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(response.data);
       } else {
         setUser(null);
-        if (window.location.pathname !== '/login') {
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
           router.push('/login');
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       setUser(null);
-      if (window.location.pathname !== '/login') {
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
         router.push('/login');
       }
     } finally {

@@ -11,8 +11,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      // Get the return path from session storage or default to campaigns
-      const returnTo = sessionStorage.getItem('returnTo') || '/campaigns';
+      // Get the return path from session storage or default to dashboard
+      const returnTo = sessionStorage.getItem('returnTo') || '/dashboard';
       sessionStorage.removeItem('returnTo'); // Clean up
       router.push(returnTo);
     }

@@ -35,6 +35,8 @@ export default function NewSegmentPage() {
   const [nlQuery, setNlQuery] = useState('');
   const [generatingRules, setGeneratingRules] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [generatedRules, setGeneratedRules] = useState<RuleGroup | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const fieldOptions = [
     { value: 'totalSpend', label: 'Total Spend' },
@@ -48,16 +50,6 @@ export default function NewSegmentPage() {
     { value: 'eq', label: 'Equals' },
     { value: 'neq', label: 'Not Equals' },
   ];
-
-  // Helper function to find a rule or group by path
-  const findRuleOrGroup = (path: number[]) => {
-    let current: any = { rules: ruleGroups }; // Start with a dummy object containing the top-level rules array
-    for (let i = 0; i < path.length; i++) {
-      if (!current.rules || current.rules.length <= path[i]) return null;
-      current = current.rules[path[i]];
-    }
-    return current;
-  };
 
   // Helper function to update state immutably by path
   const updateStateByPath = (path: number[], updater: (item: any) => void) => {
@@ -159,7 +151,7 @@ export default function NewSegmentPage() {
       return (
         <div
           key={path.join('-')}
-          className={`rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 space-y-4 ${paddingLeftClass} ${nestingLevel > 0 ? 'bg-gray-50 dark:bg-gray-700' : ''}`} // Add padding class and background color for nested groups
+          className={`rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 space-y-4 ${paddingLeftClass} ${nestingLevel > 0 ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'}`}
         >
           <div className="flex items-center justify-between mb-4">
             <Button
@@ -169,8 +161,7 @@ export default function NewSegmentPage() {
             >
               {group.operator}
             </Button>
-            {/* Only allow removing nested groups, not the initial top-level group */}
-            {path.length > 1 && (
+            {path.length > 0 && (
               <Button
                 type="button"
                 variant="ghost"
@@ -182,7 +173,20 @@ export default function NewSegmentPage() {
             )}
           </div>
           <div className="space-y-4">
-            {group.rules.map((subItem, subIndex) => renderRuleItem(subItem, [...path, subIndex]))}
+            {group.rules.map((subItem, subIndex) => {
+              return (
+                <>
+                  {subIndex > 0 && (
+                    <div className="flex items-center justify-center py-2">
+                      <span className="px-3 py-1 text-sm font-medium text-white bg-gray-500 dark:bg-gray-600 rounded-full">
+                        {group.operator}
+                      </span>
+                    </div>
+                  )}
+                  {renderRuleItem(subItem, [...path, subIndex])}
+                </>
+              );
+            })}
           </div>
           <div className="flex space-x-2 mt-4">
             <Button
@@ -210,7 +214,7 @@ export default function NewSegmentPage() {
       // This is a Rule
       const rule = item as Rule;
       return (
-        <div key={path.join('-')} className="flex items-center space-x-4">
+        <div key={path.join('-')} className="flex items-center space-x-4 p-3 border rounded-md dark:border-gray-700 bg-white dark:bg-gray-800">
           <select
             value={rule.field}
             onChange={(e) => updateRule(path, 'field', e.target.value)}
@@ -301,18 +305,34 @@ export default function NewSegmentPage() {
   const handleGenerateRules = async () => {
     setGeneratingRules(true);
     setAiError(null);
+    setGeneratedRules(null);
+    setShowPreview(false);
     try {
       const response = await api.post(endpoints.segments.generateRules, {
         query: nlQuery,
       });
-      // Wrap the received rules object in an array before setting state
-      setRuleGroups([response.data.rules]);
+      // Store the generated rules in a separate state for preview
+      setGeneratedRules(response.data.rules);
+      setShowPreview(true);
     } catch (error) {
       console.error('Failed to generate rules:', error);
-      setAiError('Failed to generate rules. Please try again later.');
+      setAiError(error instanceof Error ? error.message : 'Failed to generate rules. Please try again later.');
     } finally {
       setGeneratingRules(false);
     }
+  };
+
+  const applyGeneratedRules = () => {
+    if (generatedRules) {
+      setRuleGroups([generatedRules]);
+      setShowPreview(false);
+      setGeneratedRules(null);
+    }
+  };
+
+  const cancelGeneratedRules = () => {
+    setShowPreview(false);
+    setGeneratedRules(null);
   };
 
   return (
@@ -346,115 +366,70 @@ export default function NewSegmentPage() {
                     />
                   </div>
 
-                  {/* Natural Language Rule Generation Section */}
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="nl-query"
-                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      Describe your segment (Optional AI assistance)
-                    </label>
-                    <Textarea
-                      id="nl-query"
-                      value={nlQuery}
-                      onChange={(e) => setNlQuery(e.target.value)}
-                      rows={2}
-                      className="mt-1"
-                      placeholder="e.g., Customers who spent more than 5000 and haven't purchased in 6 months"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleGenerateRules}
-                      disabled={generatingRules || !nlQuery.trim()}
-                    >
-                      {generatingRules ? 'Generating...' : 'Generate Rules from Description'}
-                    </Button>
-                    {aiError && (
-                       <p className="text-sm text-red-600 dark:text-red-400">{aiError}</p>
+                  {/* Rule Builder */}
+                  <div className="space-y-6 border p-6 rounded-lg dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">Segment Rules</h2>
+                    {ruleGroups.map((group, index) =>
+                      renderRuleItem(group, [index])
                     )}
                   </div>
 
-                  {/* Manual Rule Builder Section */}
-                  <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Or build your rules manually:</p>
-                    {/* Render rule groups using the recursive function */}
-                    <div className="space-y-4">
-                      {ruleGroups.map((group, groupIndex) => (
-                        <div
-                          key={groupIndex}
-                          className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4"
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => toggleGroupOperator([groupIndex])}
-                            >
-                              {group.operator}
-                            </Button>
-                            {ruleGroups.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeRuleGroup([groupIndex])}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                          <div className="space-y-4">
-                            {group.rules.map((item, itemIndex) =>
-                              renderRuleItem(item, [groupIndex, itemIndex])
-                            )}
-                          </div>
-                          <div className="flex space-x-2 mt-4">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addRule([groupIndex])}
-                            >
-                              <Plus className="h-4 w-4 mr-2" />
-                              Add Rule
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addRuleGroup([groupIndex])}
-                            >
-                              <Plus className="h-4 w-4 mr-2" />
-                              Add Rule Group
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => addRuleGroup()}
+                  {/* AI Rule Generation */}
+                  <div className="space-y-4 border p-6 rounded-lg dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">AI Rule Suggestions</h2>
+                    <div>
+                      <label
+                        htmlFor="nl-query"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                       >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Rule Group
-                      </Button>
+                        Describe your segment (Optional AI assistance)
+                      </label>
+                      <Textarea
+                        id="nl-query"
+                        value={nlQuery}
+                        onChange={(e) => setNlQuery(e.target.value)}
+                        rows={2}
+                        className="mt-1"
+                        placeholder="e.g., customers who spent more than 1000 USD in the last 30 days"
+                      />
                     </div>
-                  </div>
-
-                  <div className="flex items-center space-x-4">
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={previewAudience}
-                      disabled={loading}
+                      onClick={handleGenerateRules}
+                      disabled={generatingRules}
                     >
-                      {loading ? 'Previewing...' : 'Preview Audience'}
+                      {generatingRules ? 'Generating...' : 'Generate Rules from Text'}
+                    </Button>
+
+                    {aiError && (
+                      <p className="text-red-600 dark:text-red-400">{aiError}</p>
+                    )}
+
+                    {generatedRules && showPreview && (
+                      <div className="mt-4 space-y-4 p-4 border rounded-lg dark:border-gray-600 bg-white dark:bg-gray-700">
+                        <h3 className="text-md font-medium text-gray-900 dark:text-white">Generated Rules:</h3>
+                        {renderRuleItem(generatedRules, [])} {/* Render generated rules temporarily */}
+                        <div className="flex space-x-2">
+                          <Button type="button" onClick={applyGeneratedRules}>Apply</Button>
+                          <Button type="button" variant="outline" onClick={cancelGeneratedRules}>Cancel</Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Audience Preview */}
+                  <div className="space-y-4 border p-6 rounded-lg dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">Audience Preview</h2>
+                    <Button
+                      type="button"
+                      onClick={previewAudience}
+                      disabled={loading || submitting}
+                    >
+                      {loading ? 'Calculating...' : 'Preview Audience Size'}
                     </Button>
                     {audienceSize !== null && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Estimated audience size: {audienceSize} customers
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">
+                        Estimated Audience Size: {audienceSize}
                       </p>
                     )}
                   </div>

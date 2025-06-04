@@ -15,12 +15,32 @@ export function Header() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <header className="bg-white dark:bg-gray-800 shadow">
+        <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Top">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center">
+              <Link href="/" className="text-xl font-bold text-gray-900 dark:text-white">
+                CRM Platform
+              </Link>
+            </div>
+            <div className="ml-10 flex items-center space-x-4">
+              <Link href="/login">
+                <Button>Login</Button>
+              </Link>
+            </div>
+          </div>
+        </nav>
+      </header>
+    );
+  }
 
   const navigation = [
+    { name: 'Dashboard', href: '/dashboard' },
     { name: 'Campaigns', href: '/campaigns' },
     { name: 'Segments', href: '/segments' },
-    { name: 'Customers', href: '/customers' },
+    { name: 'Data Ingestion', href: '/ingest' },
   ];
 
   return (
