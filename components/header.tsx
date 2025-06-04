@@ -1,47 +1,86 @@
 "use client"
 
-import Link from "next/link"
-import { LogOut } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { usePathname, useRouter } from "next/navigation"
-import Cookies from 'js-cookie';
+import { useAuth } from '@/lib/auth-context';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function Header() {
-  const pathname = usePathname()
-  const router = useRouter()
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
 
-  const handleLogout = () => {
-    Cookies.remove('authToken');
-    router.push('/login');
-  };
+  if (!user) return null;
+
+  const navigation = [
+    { name: 'Campaigns', href: '/campaigns' },
+    { name: 'Segments', href: '/segments' },
+    { name: 'Customers', href: '/customers' },
+  ];
 
   return (
-    <header className="border-b">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="text-xl font-bold">
-            Mini CRM
-          </Link>
-          <nav className="hidden md:flex gap-6">
-            <Link
-              href="/campaigns"
-              className={`text-sm font-medium transition-colors hover:text-primary ${pathname === "/campaigns" ? "text-primary" : "text-muted-foreground"}`}
-            >
-              Campaigns
+    <header className="bg-white dark:bg-gray-800 shadow">
+      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Top">
+        <div className="flex h-16 items-center justify-between">
+          <div className="flex items-center">
+            <Link href="/" className="text-xl font-bold text-gray-900 dark:text-white">
+              CRM Platform
             </Link>
-            <Link
-              href="/campaigns/new"
-              className={`text-sm font-medium transition-colors hover:text-primary ${pathname === "/campaigns/new" ? "text-primary" : "text-muted-foreground"}`}
-            >
-              New Campaign
-            </Link>
-          </nav>
+            <div className="ml-10 flex items-baseline space-x-4">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`px-3 py-2 text-sm font-medium rounded-md ${
+                    pathname === item.href
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                      : 'text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  {user.picture ? (
+                    <img
+                      src={user.picture}
+                      alt={user.name}
+                      className="h-8 w-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                        {user?.name?.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="text-sm">
+                  {user.name}
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-sm text-gray-500">
+                  {user.email}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={logout} className="text-red-600">
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={handleLogout}>
-          <LogOut className="h-5 w-5" />
-          <span className="sr-only">Logout</span>
-        </Button>
-      </div>
+      </nav>
     </header>
-  )
+  );
 }
